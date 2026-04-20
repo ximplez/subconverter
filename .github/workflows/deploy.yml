@@ -1,0 +1,49 @@
+---
+name: Deploy
+
+concurrency:
+  group: ${{ github.workflow }} # 使用工作流名称作为并发组的key
+  cancel-in-progress: true # 取消任何正在进行的相同并发组的工作流
+
+permissions:
+  contents: write
+  actions: write
+
+# 触发条件
+on:
+  push:
+    branches: [master]
+    tags:
+      - "**"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    # 运行环境
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    # 运行步骤
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout secret
+        uses: actions/checkout@v4
+        with:
+          repository: ximplez/secret
+          token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
+          path: secret
+      - name: ready deploy
+        run: |
+          pwd
+          mkdir deploy
+          cp -r secret/subconvert/deploy_config.json deploy/
+          cp -r secret/common/* deploy/
+          ls -l deploy
+        # 部署到服务器
+      - name: deploy
+        uses: ximplez/ssh-deploy@main
+        env:
+          DEPLOY_CONFIG_PATH: deploy/deploy_config.json
+          SSH_CMD_CONFIG_PATH: deploy/ssh_cmd.json
